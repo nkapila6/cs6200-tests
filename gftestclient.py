@@ -65,6 +65,7 @@ if __name__ == "__main__":
     elif option == 10:
         # Option 10. Send an complete request, and read in small pieces with delays.
         # Break this client to cause ECONNRESET on the server recv().
+        # This one should break in the payload handling.
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(("127.0.0.1", 10823))
         s.send(b"GETFILE GET /hello\r\n\r\n")
@@ -77,9 +78,15 @@ if __name__ == "__main__":
             time.sleep(8640)
             pass
     elif option == 11:
-        # Option 11. Send an complete request, but close before receiving the response.
+        # Option 11. Send a complete request, but close before receiving the response.
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(("127.0.0.1", 10823))
         s.send(b"GETFILE GET /hello\r\n\r\n")
+        s.close()
+    elif option == 12:
+        # Option 12. Send an incomplete request, then close.
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect(("127.0.0.1", 10823))
+        s.send(b"GETFILE GET ")
         s.close()
 
