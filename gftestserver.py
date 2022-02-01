@@ -24,7 +24,8 @@ if __name__ == "__main__":
 
         
         if option == 1:
-            # Option 1.  # Do not send anything, client send() will ECONNRESET.
+            # Option 1.  # Do not send anything.
+            # Break this server and the client recv() may ECONNRESET if it is waiting for data.
             pass
         elif option == 2:
             # Option 2. Send the header, in two pieces. Then send 1 byte payload. Client should succeed.
