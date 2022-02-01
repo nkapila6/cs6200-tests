@@ -44,6 +44,9 @@ if __name__ == "__main__":
             while True:
                 s.send(b"abcd")
                 time.sleep(1)
+        elif option == 5:
+            # Option 5. Send a non-decimal length
+            s.send(b"GETFILE OK badlengthisbad\r\n\r\n")
         elif option == 1000:
             # Serve a 2 GB + 1 (exceeds int) file
             # This can be verified with: sha1sum filename.
