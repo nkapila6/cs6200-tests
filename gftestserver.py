@@ -9,7 +9,7 @@ import hashlib
 
 if __name__ == "__main__":
     # Which option to test
-    option = 4
+    option = int(sys.argv[1])
 
     ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
