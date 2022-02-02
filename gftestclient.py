@@ -1,6 +1,7 @@
 """ Getfile Test Client for Abnormal Cases """
 import socket
 import time
+import sys
 
 # Hello, OMSCS 6200 GIOS Spring 2022!
 # By: Miguel Paraz <mparaz@gatech.edu>

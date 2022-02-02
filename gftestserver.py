@@ -3,6 +3,7 @@ import socket
 import time
 import random
 import hashlib
+import sys
 
 # Hello, OMSCS 6200 GIOS Spring 2022!
 # By: Miguel Paraz <mparaz@gatech.edu>
