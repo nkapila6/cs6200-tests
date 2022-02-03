@@ -4,14 +4,33 @@ import time
 import random
 import hashlib
 import sys
+import importlib.util
 
 # Hello, OMSCS 6200 GIOS Spring 2022!
 # By: Miguel Paraz <mparaz@gatech.edu>
 
-if __name__ == "__main__":
-    # Which option to test
-    option = sys.argv[1] if len(sys.argv)>2 else 1
+# Use optimised random function if available
+# Thanks to Vladimir.
+def slow_random_bytes(buffer_size):
+    return bytes([random.randint(0, 255) for _ in range(0, buffer_size)])
 
+random_bytes = None
+
+if importlib.util.find_spec("numpy"):
+    print("numpy found")
+    import numpy as np
+    random_bytes = np.random.bytes
+else:
+    print("numpy not found, consider: pip install numpy")
+    random_bytes = slow_random_bytes
+
+if __name__ == "__main__":
+
+
+    # Which option to test
+    option = int(sys.argv[1]) if len(sys.argv)>1 else 1
+    print(f"option={option}")
+    
     ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     ss.bind(("127.0.0.1", 10823))
