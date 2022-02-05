@@ -10,31 +10,28 @@ import java.io.OutputStream;
 import java.io.InputStream;
 
 /**
- * Multi-Threaded GetFile Test Client by Miguel Paraz <mparaz@gatech.edu>
+ * Multithreaded GetFile Test Client by Miguel Paraz <mparaz@gatech.edu>
  * Command line: number-of-workers minimum-delay-in-milliseconds maximum-delay
  */
 public class MtgfTestClient implements Runnable {
-    private final int testOption;
     private final int workerId;
     private final int minDelay, maxDelay;
 
-    public MtgfTestClient(int testOption, int workerId, int minDelay, int maxDelay) {
-        this.testOption = testOption;
+    public MtgfTestClient(int workerId, int minDelay, int maxDelay) {
         this.workerId = workerId;
         this.minDelay = minDelay;
         this.maxDelay = maxDelay;
     }
 
     public static void main(String[] args) throws InterruptedException {
-        final int testOption = Integer.parseInt(args[0]);
-        final int workers = Integer.parseInt(args[1]);
-        final int minDelay = Integer.parseInt(args[2]);
-        final int maxDelay = Integer.parseInt(args[3]);
+        final int workers = Integer.parseInt(args[0]);
+        final int minDelay = Integer.parseInt(args[1]);
+        final int maxDelay = Integer.parseInt(args[2]);
 
         final ExecutorService executorService = Executors.newFixedThreadPool(workers);
 
         for (int i = 0; i < workers; i++) {
-            executorService.execute(new MtgfTestClient(testOption, i, minDelay, maxDelay));
+            executorService.execute(new MtgfTestClient(i, minDelay, maxDelay));
         }
 
         // Just wait indefiniteiy...
@@ -45,20 +42,12 @@ public class MtgfTestClient implements Runnable {
     public void run() {
         final Random random = new Random();
 
-        // More than enough...
-        final byte[] buffer = new byte[8192];
-
-        final String header;
-        
-        if (testOption == 1) {
-            // Just send a nonexistent path. We're not testing I/O.
-            header = "GETFILE GET /worker" + workerId + "\r\n\r\n";
-        } else {
-            // Send a request for an existing path.
-            header = "GETFILE GET /courses/ud923/filecorpus/paraglider.jpg\r\n\r\n";
-        }
+        // Just send a nonexistent path. We're not testing I/O.
+        final String header = "GETFILE GET /worker" + workerId + "\r\n\r\n";
         
         while (true) {
+            final byte[] buffer = new byte[8192];
+
             try {
                 final Socket socket = new Socket("127.0.0.1", 10823);
                 final OutputStream outputStream = socket.getOutputStream();
@@ -66,12 +55,8 @@ public class MtgfTestClient implements Runnable {
 
                 outputStream.write(header.getBytes());
 
-                // Need to read the socket fully.
-                // Otherwise, server will report connection reset by peer
-                // (which is not being tested now)
-                while (inputStream.read(buffer) > 0);
-
-                socket.close();
+                inputStream.read(buffer);
+                inputStream.close();
 
                 // Delay
                 final int delay;
