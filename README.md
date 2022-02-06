@@ -39,3 +39,10 @@ Example: A slow test for single-threaded operation:
 
 Example: Stress test:
 ```java -classpath ./classes/ edu.gatech.gios.MtgfTestClient 1000 10 10```
+
+# Workload generator:
+
+The workload generator is a simple way of creating `workload.txt`, `content.txt`, and some files. This allows testing of multithreading clients and servers.
+Note that the current `workload.c` only supports 100 lines.
+
+```python ./gfworkload.py```
