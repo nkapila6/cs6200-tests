@@ -1,21 +1,25 @@
 # 6200-tools
 GIOS 6200 tools
 
+Original author: Miguel Paraz <mparaz@gatech.edu> from Graduate Introduction to Operating Systems 6200, Spring 2022.
+
+These tools are freely available to use and reuse for any purpose, especially for but not limited to future classes.
+
 # Python test clients for Getfile client wire protocol:
 
 ## Installing python
-```apt-get install python```
+```apt-get install python3```
 
 ## Testing Server
 
 After running your server, you can run
-```python ./gftestclient.py 5```
+```python3 ./gftestclient.py 5```
 If you don't pass command line argument, default option tested would be 2
 
 
 ## Testing Client
 
-```python ./gftestserver.py 3```
+```python3 ./gftestserver.py 3```
 If you don't pass command line argument, default option tested would be 1
 
 
@@ -45,4 +49,4 @@ Example: Stress test:
 The workload generator is a simple way of creating `workload.txt`, `content.txt`, and some files. This allows testing of multithreading clients and servers.
 Note that the current `workload.c` only supports 100 lines.
 
-```python ./gfworkload.py```
+```python3 ./gfworkload.py```
