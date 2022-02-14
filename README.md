@@ -3,7 +3,7 @@ GIOS 6200 tools
 
 Original author: Miguel Paraz <mparaz@gatech.edu> from Graduate Introduction to Operating Systems 6200, Spring 2022.
 
-These tools are freely available to use and reuse for any purpose, especially for but not limited to future classes.
+These tools are freely available to use and reuse for any purpose, especially for but not limited to future classes and students.
 
 # Python test clients for Getfile client wire protocol:
 
@@ -28,7 +28,7 @@ If you don't pass command line argument, default option tested would be 1
 This test only sends invalid paths and does not validate the filename. The server should just return File Not Found.
 
 ## Installing Java
-```apt-get install java-8-openjdk```
+```apt-get install openjdk-8-jdk```
 
 ## Building
 ```make```
