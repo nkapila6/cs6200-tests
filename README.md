@@ -50,3 +50,9 @@ The workload generator is a simple way of creating `workload.txt`, `content.txt`
 Note that the current `workload.c` only supports 100 lines.
 
 ```python3 ./gfworkload.py```
+
+# IPC Stress Test
+
+```python3 ./ipcstress.py /path/to/project/cache```
+
+No parameters at the moment.
