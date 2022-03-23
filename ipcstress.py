@@ -18,6 +18,9 @@ import subprocess
 import time
 import re
 
+# gfclient_download maximum request count 
+MAX_GFCLIENT_DOWNLOAD_REQUEST_COUNT = 1000
+
 # Block size for the dd command.
 DD_BLOCK_SIZE = 16
 
@@ -116,6 +119,8 @@ def run_ipcstress(
 ) -> int:
     """ Run IPC Stress. Return 0 for normal exit. """
 
+    remaining_request_count = request_count
+
     popen_cache = subprocess.Popen([
         './simplecached',
         '-c',
@@ -144,26 +149,37 @@ def run_ipcstress(
     # Failed to connect.  Trying again....
     time.sleep(0.250)
 
-    popen_download = subprocess.Popen([
-        './gfclient_download',
-        '-p',
-        str(port),
-        '-t',
-        str(download_thread_count),
-        '-w',
-        f'./{WORKLOAD_FILENAME}',
-        '-r',
-        str(request_count)
-    ], cwd=workdir
-    )
+    actual_request_count = min(MAX_GFCLIENT_DOWNLOAD_REQUEST_COUNT, remaining_request_count)
+    popen_download = None
+    download_poll = None
+
     # print(f'download pid: {popen_download.pid}')
-
     while True:
-        download_poll = popen_download.poll()
+        if popen_download:
+            download_poll = popen_download.poll()
 
+        # Download if first time or previous request complete.
         # explicit "is not None" is needed because the return code may be 0
-        if download_poll is not None:
-            break
+        if (download_poll is not None) or not popen_download:
+            if remaining_request_count == 0:
+                break
+
+            actual_request_count = min(MAX_GFCLIENT_DOWNLOAD_REQUEST_COUNT, remaining_request_count)
+
+            popen_download = subprocess.Popen([
+                './gfclient_download',
+                '-p',
+                str(port),
+                '-t',
+                str(download_thread_count),
+                '-w',
+                f'./{WORKLOAD_FILENAME}',
+                '-r',
+                str(actual_request_count)
+            ], cwd=workdir
+            )
+            remaining_request_count -= actual_request_count
+
 
         cache_poll = popen_cache.poll() 
         proxy_poll = popen_proxy.poll()
@@ -229,7 +245,7 @@ def run_base_test(workdir: str):
     port = 10823
     create_workload(workdir)
 
-    request_count = 100
+    request_count = 101
     cache_thread_count = 1
     proxy_thread_count = 1
     proxy_segment_count = 1
@@ -330,11 +346,48 @@ def run_stress_test(workdir: str):
             if not verify_results(workdir):
                 return
 
+def run_soak_test(workdir: str):
+    """ Soak test with fixed parameters. """
+
+    port = 10823
+    create_workload(workdir)
+
+    request_count = 1000000
+    proxy_segment_count = 50
+    proxy_segment_size = 1048576
+
+    cache_thread_count = 100
+    proxy_thread_count = 100
+    download_thread_count = proxy_thread_count
+
+    print(
+        f'cache_thread_count={cache_thread_count}, proxy_thread_count={proxy_thread_count}, '
+        f'proxy_segment_count={proxy_segment_count}, proxy_segment_size={proxy_segment_size}, '
+        f'download_thread_count={download_thread_count}, request_count={request_count}'
+    )
+
+    if run_ipcstress(
+        workdir,
+        cache_thread_count,
+        proxy_thread_count,
+        proxy_segment_count,
+        proxy_segment_size,
+        download_thread_count,
+        request_count,
+        port
+    ) != 0:
+        return
+
+    if not verify_results(workdir):
+        return
+
 
 if __name__ == '__main__':
     workdir = sys.argv[1] if len(sys.argv) == 2 else '.'
 
     # Pick a test:
-    run_base_test(workdir)
+    # run_base_test(workdir)
     # run_parameter_test(workdir)
     # run_stress_test(workdir)
+    run_soak_test(workdir)
+
