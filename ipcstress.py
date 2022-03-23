@@ -245,7 +245,7 @@ def run_base_test(workdir: str):
     port = 10823
     create_workload(workdir)
 
-    request_count = 101
+    request_count = 100
     cache_thread_count = 1
     proxy_thread_count = 1
     proxy_segment_count = 1
@@ -383,11 +383,14 @@ def run_soak_test(workdir: str):
 
 
 if __name__ == '__main__':
-    workdir = sys.argv[1] if len(sys.argv) == 2 else '.'
+    test_names = [
+        name.split('_')[1] for name in globals().keys()
+        if name.startswith('run_') and name.endswith("_test")
+    ]
 
-    # Pick a test:
-    # run_base_test(workdir)
-    # run_parameter_test(workdir)
-    # run_stress_test(workdir)
-    run_soak_test(workdir)
+    print(f'python3 {sys.argv[0]} workdir {test_names}')
+    workdir = sys.argv[1] if len(sys.argv) >= 2 else '.'
+    test_name = sys.argv[2] if len(sys.argv) >= 3 else 'base'
+    
+    (globals()[f'run_{test_name}_test'])(workdir)
 
