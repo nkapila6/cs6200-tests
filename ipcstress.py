@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 """ IPC Stress Test """
 #
 # Create a workload (use shell commands)
@@ -98,8 +100,8 @@ def create_workload(workdir: str):
         for i, _ in enumerate(filenames):
             f.write(f'/{WORKLOAD_URL_PATH}/workload{i}.bin\n')
 
-    # Delete the result directory, gfclient_download will recreate it.
-    shutil.rmtree(f'{workdir}/{WORKLOAD_URL_PATH}')
+    # Delete the result directory if it exists, gfclient_download will recreate it.
+    shutil.rmtree(f'{workdir}/{WORKLOAD_URL_PATH}', ignore_errors=True)
 
 
 def run_ipcstress(
@@ -163,13 +165,19 @@ def run_ipcstress(
         if download_poll is not None:
             break
 
-        if popen_cache.poll() is not None:
+        cache_poll = popen_cache.poll() 
+        proxy_poll = popen_proxy.poll()
+
+        if (cache_poll is not None) and (proxy_poll is not None):
+            print('Cache and proxy both exited')
+            popen_download.terminate()
+            return 3
+        if cache_poll is not None:
             print('Cache exited')
             popen_download.terminate()
             popen_proxy.terminate()
             return 1
-
-        if popen_proxy.poll() is not None:
+        if proxy_poll is not None:
             print('Proxy exited')
             popen_download.terminate()
             popen_cache.terminate()
@@ -258,7 +266,7 @@ def run_parameter_test(workdir: str):
     request_count = 10
     for cache_thread_count in range(1, 101, 10):
         for proxy_thread_count in range(cache_thread_count, 101, 10):
-            for proxy_segment_count in range(1, 100):
+            for proxy_segment_count in range(1, 101, 10):
                 download_thread_count = proxy_thread_count
 
                 proxy_segment_size = 512
