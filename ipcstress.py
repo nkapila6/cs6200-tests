@@ -1,14 +1,8 @@
 #!/usr/bin/python3
 
 """ IPC Stress Test """
-#
-# Create a workload (use shell commands)
-# Start the simplecached
-# Start the webproxy
-# Run gfclient_download
-# Verify file checksums
 
-from typing import List
+from typing import List, Tuple
 
 import os
 import shutil
@@ -18,7 +12,7 @@ import subprocess
 import time
 import re
 
-# gfclient_download maximum request count 
+# gfclient_download maximum request count
 MAX_GFCLIENT_DOWNLOAD_REQUEST_COUNT = 1000
 
 # Block size for the dd command.
@@ -26,7 +20,12 @@ DD_BLOCK_SIZE = 16
 
 # Use some powers of two plus some multiple of the dd block size,
 # to make generation reasonably fast.
+#
+# Bytes per second estimation is only available if request count is an even multiple of
+# the workload sizes, thus the 10 sizes here.
 WORKLOAD_SIZES = [
+    0,
+    563,
     1024 + 1 * DD_BLOCK_SIZE,
     4096 + 7 * DD_BLOCK_SIZE,
     65536 + 13 * DD_BLOCK_SIZE,
@@ -34,7 +33,7 @@ WORKLOAD_SIZES = [
     1048576 + 23 * DD_BLOCK_SIZE,
     4 * 1048576 + 29 * DD_BLOCK_SIZE,
     8 * 1048576 + 31 * DD_BLOCK_SIZE,
-    16 * 1048576 + 33 * DD_BLOCK_SIZE,
+   16 * 1048576 + 33 * DD_BLOCK_SIZE,
 ]
 
 # Alternative: random sizes
@@ -58,8 +57,8 @@ def run_sha1sum(filenames: List[str], output_file: str) -> None:
         check=True)
 
     # Store the hashes.
-    with open(output_file, 'wb') as f:
-        f.write(result.stdout)
+    with open(output_file, 'wb') as file:
+        file.write(result.stdout)
 
 
 def create_workload(workdir: str):
@@ -92,19 +91,25 @@ def create_workload(workdir: str):
     # Create the locals file.
     full_locals_filename = f'{workdir}/{LOCALS_FILENAME}'
     print(f'Creating locals file: {full_locals_filename}')
-    with open(full_locals_filename, 'w') as f:
+    with open(full_locals_filename, 'w') as file:
         for i, filename in enumerate(filenames):
-            f.write(f'/{WORKLOAD_URL_PATH}/workload{i}.bin {filename}\n')
+            file.write(f'/{WORKLOAD_URL_PATH}/workload{i}.bin {filename}\n')
 
     # Create the workload file.
     full_workload_filename = f'{workdir}/{WORKLOAD_FILENAME}'
     print(f'Creating workload file: {full_workload_filename}')
-    with open(f'{workdir}/{WORKLOAD_FILENAME}', 'w') as f:
+    with open(f'{workdir}/{WORKLOAD_FILENAME}', 'w') as file:
         for i, _ in enumerate(filenames):
-            f.write(f'/{WORKLOAD_URL_PATH}/workload{i}.bin\n')
+            file.write(f'/{WORKLOAD_URL_PATH}/workload{i}.bin\n')
 
     # Delete the result directory if it exists, gfclient_download will recreate it.
     shutil.rmtree(f'{workdir}/{WORKLOAD_URL_PATH}', ignore_errors=True)
+
+def read_cpu_times(pid: int) -> Tuple[int, int]:
+    """ Read utime (user time) and stime (system/kernel time) for a PID, in ticks. """
+    with open(f'/proc/{pid}/stat', 'r') as file:
+        entries = file.readline().rstrip().split(' ')
+        return int(entries[13]), int(entries[14])
 
 
 def run_ipcstress(
@@ -118,6 +123,10 @@ def run_ipcstress(
     port: int
 ) -> int:
     """ Run IPC Stress. Return 0 for normal exit. """
+
+    # Compute the ticks per second
+    result = subprocess.run(['/usr/bin/getconf', 'CLK_TCK'], capture_output=True, check=True)
+    ticks_per_second = int(result.stdout)
 
     remaining_request_count = request_count
 
@@ -149,9 +158,14 @@ def run_ipcstress(
     # Failed to connect.  Trying again....
     time.sleep(0.250)
 
-    actual_request_count = min(MAX_GFCLIENT_DOWNLOAD_REQUEST_COUNT, remaining_request_count)
+    actual_request_done = 0
     popen_download = None
     download_poll = None
+
+    # Benchmarking:
+    start_time = None
+    start_cache_utime, start_cache_stime = read_cpu_times(popen_cache.pid)
+    start_proxy_utime, start_proxy_stime = read_cpu_times(popen_proxy.pid)
 
     # print(f'download pid: {popen_download.pid}')
     while True:
@@ -161,6 +175,54 @@ def run_ipcstress(
         # Download if first time or previous request complete.
         # explicit "is not None" is needed because the return code may be 0
         if (download_poll is not None) or not popen_download:
+            if start_time:
+                elapsed_time = time.time() - start_time
+
+                # Requests per second
+                rps = actual_request_count / elapsed_time
+                actual_request_done += actual_request_count
+
+                # CPU time (user and system)
+                cache_utime, cache_stime = read_cpu_times(popen_cache.pid)
+                proxy_utime, proxy_stime = read_cpu_times(popen_proxy.pid)
+                elapsed_cache_utime = (cache_utime - start_cache_utime) / ticks_per_second
+                elapsed_cache_stime = (cache_stime - start_cache_stime) / ticks_per_second
+                elapsed_proxy_utime = (proxy_utime - start_proxy_utime) / ticks_per_second
+                elapsed_proxy_stime = (proxy_stime - start_proxy_stime) / ticks_per_second
+                (start_cache_utime, start_cache_stime) = (cache_utime, cache_stime)
+                (start_proxy_utime, start_proxy_stime) = (proxy_utime, proxy_stime)
+
+                elapsed_cache_ttime = elapsed_cache_utime + elapsed_cache_stime
+                elapsed_proxy_ttime = elapsed_proxy_utime + elapsed_proxy_stime
+
+                # bps is only possible if the requests are a multiple of the workload.
+                # Otherwise, gfclient_download does not evenly distribute the requests
+                # across the workload files.
+                request_count_chunk, request_count_extra = divmod(actual_request_count, len(WORKLOAD_SIZES))
+                if not request_count_extra:
+                    nbytes = request_count_chunk * sum(WORKLOAD_SIZES)
+                    bps = nbytes / elapsed_time
+                    print(
+                        f'{actual_request_done}/{request_count} in {elapsed_time:0.2f}s, {rps:0.2f} rps, {bps:0.0f} bps, ',
+                        end=''
+                    )
+                else:
+                    print(
+                        f'{actual_request_done}/{request_count} in {elapsed_time:0.2f}s, {rps:0.2f} rps, ',
+                        end=''
+                    )
+
+                print(
+                    'cache: '
+                    f'{elapsed_cache_utime}s {100 * elapsed_cache_utime / elapsed_time:0.2f}% user, '
+                    f'{elapsed_cache_stime}s {100 * elapsed_cache_stime / elapsed_time:0.2f}% kernel, '
+                    f'{elapsed_cache_ttime}s {100 * elapsed_cache_ttime / elapsed_time:0.2f}% total, '
+                    'proxy: '
+                    f'{elapsed_proxy_utime}s {100 * elapsed_proxy_utime / elapsed_time:0.2f}% user, '
+                    f'{elapsed_proxy_stime}s {100 * elapsed_proxy_stime / elapsed_time:0.2f}% kernel, '
+                    f'{elapsed_proxy_ttime}s {100 * elapsed_proxy_ttime / elapsed_time:0.2f}% total'
+                )
+
             if remaining_request_count == 0:
                 break
 
@@ -179,7 +241,7 @@ def run_ipcstress(
             ], cwd=workdir
             )
             remaining_request_count -= actual_request_count
-
+            start_time = time.time()
 
         cache_poll = popen_cache.poll() 
         proxy_poll = popen_proxy.poll()
@@ -391,6 +453,5 @@ if __name__ == '__main__':
     print(f'python3 {sys.argv[0]} workdir {test_names}')
     workdir = sys.argv[1] if len(sys.argv) >= 2 else '.'
     test_name = sys.argv[2] if len(sys.argv) >= 3 else 'base'
-    
-    (globals()[f'run_{test_name}_test'])(workdir)
 
+    (globals()[f'run_{test_name}_test'])(workdir)
