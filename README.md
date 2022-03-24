@@ -53,6 +53,14 @@ Note that the current `workload.c` only supports 100 lines.
 
 # IPC Stress Test
 
-```python3 ./ipcstress.py /path/to/project/cache```
+```python3 ./ipcstress.py /path/to/project/cache test-name```
 
-No parameters at the moment.
+Current tests:
+
+`base` - the baseline test, get this to work first
+
+`stress` - stress with an increasing number of threads but fixed parameters
+
+`soak` - run for a long time with a fixed number of threads
+
+`parameter` - tries variations on the parameters
