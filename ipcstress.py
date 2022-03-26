@@ -195,6 +195,12 @@ def run_ipcstress(
                 elapsed_cache_ttime = elapsed_cache_utime + elapsed_cache_stime
                 elapsed_proxy_ttime = elapsed_proxy_utime + elapsed_proxy_stime
 
+                # For the summary:
+                total_elapsed_cache_utime += elapsed_cache_utime
+                total_elapsed_cache_stime += elapsed_cache_stime
+                total_elapsed_proxy_utime += elapsed_proxy_utime
+                total_elapsed_proxy_stime += elapsed_proxy_stime
+
                 # bps is only possible if the requests are a multiple of the workload.
                 # Otherwise, gfclient_download does not evenly distribute the requests
                 # across the workload files.
@@ -247,16 +253,16 @@ def run_ipcstress(
         proxy_poll = popen_proxy.poll()
 
         if (cache_poll is not None) and (proxy_poll is not None):
-            print('Cache and proxy both exited')
+            print(f'Both cache exited ({cache_poll}) and proxy ({proxy_poll}) exited')
             popen_download.terminate()
             return 3
         if cache_poll is not None:
-            print('Cache exited')
+            print(f'Cache exited ({cache_poll})')
             popen_download.terminate()
             popen_proxy.terminate()
             return 1
         if proxy_poll is not None:
-            print('Proxy exited')
+            print(f'Proxy exited ({proxy_poll})')
             popen_download.terminate()
             popen_cache.terminate()
             return 2
@@ -265,6 +271,38 @@ def run_ipcstress(
 
     popen_cache.terminate()
     popen_proxy.terminate()
+
+    # Benchmark for this run, if it ran more than once
+    if total_elapsed_time > elapsed_time:
+        rps = actual_request_done / total_elapsed_time
+        total_elapsed_cache_ttime = total_elapsed_cache_utime + total_elapsed_cache_stime
+        total_elapsed_proxy_ttime = total_elapsed_proxy_utime + total_elapsed_proxy_stime
+
+        request_count_chunk, request_count_extra = divmod(actual_request_done, len(WORKLOAD_SIZES))
+        if not request_count_extra:
+            nbytes = request_count_chunk * sum(WORKLOAD_SIZES)
+            bps = nbytes / total_elapsed_time
+            print(
+                f'Summary: {total_elapsed_time:0.2f}s, {rps:0.2f} rps, {bps:0.0f} bps, ',
+                end=''
+            )
+        else:
+            print(
+                f'Summary: {total_elapsed_time:0.2f}s, {rps:0.2f} rps, ',
+                end=''
+            )
+
+        print(
+            'cache: '
+            f'{total_elapsed_cache_utime}s {100 * total_elapsed_cache_utime / total_elapsed_time:0.2f}% user, '
+            f'{total_elapsed_cache_stime}s {100 * total_elapsed_cache_stime / total_elapsed_time:0.2f}% kernel, '
+            f'{total_elapsed_cache_ttime}s {100 * total_elapsed_cache_ttime / total_elapsed_time:0.2f}% total, '
+            'proxy: '
+            f'{total_elapsed_proxy_utime}s {100 * total_elapsed_proxy_utime / total_elapsed_time:0.2f}% user, '
+            f'{total_elapsed_proxy_stime}s {100 * total_elapsed_proxy_stime / total_elapsed_time:0.2f}% kernel, '
+            f'{total_elapsed_proxy_ttime}s {100 * total_elapsed_proxy_ttime / total_elapsed_time:0.2f}% total'
+        )
+
 
     return 0
 
