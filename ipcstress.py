@@ -167,6 +167,13 @@ def run_ipcstress(
     start_cache_utime, start_cache_stime = read_cpu_times(popen_cache.pid)
     start_proxy_utime, start_proxy_stime = read_cpu_times(popen_proxy.pid)
 
+    # Summary for the end.
+    total_elapsed_time = 0
+    total_elapsed_cache_utime = 0
+    total_elapsed_cache_stime = 0
+    total_elapsed_proxy_utime = 0
+    total_elapsed_proxy_stime = 0
+    
     # print(f'download pid: {popen_download.pid}')
     while True:
         if popen_download:
