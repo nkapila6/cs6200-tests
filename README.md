@@ -64,3 +64,7 @@ Current tests:
 `soak` - run for a long time with a fixed number of threads
 
 `parameter` - tries variations on the parameters
+
+# DFS Stress Test
+
+```python3 ./dfsstress.py number-of-test-files /path/to/server/mount /path/to/client1/mount [/path/to/client2/mount...]```
