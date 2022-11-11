@@ -47,6 +47,9 @@ WORKLOAD_URL_PATH = 'ipcstress'
 LOCALS_FILENAME = 'locals-ipcstress.txt'
 WORKLOAD_FILENAME = 'workload-ipcstress.txt'
 
+# Minimum size of the shared memory to use in the tests
+# This value has been know to change from semester to semester
+MIN_SEG_SIZE = 822
 
 def run_sha1sum(filenames: List[str], output_file: str) -> None:
     """ Run sha1sum on filenames and write to an output file. """
@@ -392,7 +395,7 @@ def run_parameter_test(workdir: str):
             for proxy_segment_count in range(1, 101, 10):
                 download_thread_count = proxy_thread_count
 
-                proxy_segment_size = 512
+                proxy_segment_size = MIN_SEG_SIZE
                 while proxy_segment_size <= 1048576:
                     print(
                         f'cache_thread_count={cache_thread_count}, proxy_thread_count={proxy_thread_count}, '
