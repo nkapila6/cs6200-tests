@@ -41,6 +41,8 @@ def stress(num_client_files: int, server_dir: str, client_dirs: List[str]) -> No
     for client_dir in client_dirs:
         for client_filename in client_filenames[client_dir]:
             filename = os.path.join(client_dir, client_filename)
+            while not os.path.exists(filename):
+                time.sleep(1)
             os.remove(filename)
 
     delete_start_time = time.time()
