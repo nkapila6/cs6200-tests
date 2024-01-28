@@ -76,6 +76,25 @@ if __name__ == "__main__":
         elif option == 8:
             # Option 8. Send a file containing CR LF CR LF
             s.send(b"GETFILE OK 4\r\n\r\n\r\n\r\n")
+        elif option == 9:
+            # Option 9. Send incomplete header and close the connection
+            s.send(b"GETFILE OK 5\r\n\r")
+            s.close()
+        elif option == 10:
+            # Option 10. Send FILE_NOT_FOUND status.
+            s.send(b"GETFILE FILE_NOT_FOUND\r\n\r\n")
+        elif option == 11:
+            # Option 11. Send ERROR status.
+            s.send(b"GETFILE ERROR\r\n\r\n")
+        elif option == 12:
+            # Option 12. Send INVALID status.
+            s.send(b"GETFILE INVALID\r\n\r\n")
+        elif option == 13:
+            # Option 13. Send wrong scheme.
+            s.send(b"POSTFILE OK 4\r\n\r\nabcd")
+        elif option == 14:
+            # Option 14. Send status not in set.
+            s.send(b"GETFILE WRONG\r\n\r\n")
         elif option == 1000:
             # Serve a 2 GB + 1 (exceeds int) file
             # This can be verified with: sha1sum filename.
