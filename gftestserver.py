@@ -96,19 +96,23 @@ if __name__ == "__main__":
             # Option 14. Send status not in set.
             s.send(b"GETFILE WRONG\r\n\r\n")
         elif option == 1000:
-            # Serve a 2 GB + 1 (exceeds int) file
+            # Serve a 2 GB + extra_bytes (exceeds int) file
             # This can be verified with: sha1sum filename.
             hash = hashlib.sha1()
-            orig_size = 2**31 + 1
+            extra_bytes = 1
+            orig_size = 2**31 + extra_bytes
             size = orig_size
             buffer_size = 8192
 
             s.send(bytes(f"GETFILE OK {size}\r\n\r\n", "UTF-8"))
-            while size > 0:
+            while size > extra_bytes:
                 random_buffer = random_bytes(buffer_size)
                 hash.update(random_buffer)
                 s.send(random_buffer)
                 size -= buffer_size
+            last_buffer = random_bytes(size)
+            hash.update(last_buffer)
+            s.send(last_buffer)
 
             print('XXX warning, sha1sum does not match files XXX')
             print(f"size={orig_size}, sha1sum={hash.hexdigest()}")
