@@ -76,20 +76,43 @@ if __name__ == "__main__":
         elif option == 8:
             # Option 8. Send a file containing CR LF CR LF
             s.send(b"GETFILE OK 4\r\n\r\n\r\n\r\n")
+        elif option == 9:
+            # Option 9. Send incomplete header and close the connection
+            s.send(b"GETFILE OK 5\r\n\r")
+            s.close()
+        elif option == 10:
+            # Option 10. Send FILE_NOT_FOUND status.
+            s.send(b"GETFILE FILE_NOT_FOUND\r\n\r\n")
+        elif option == 11:
+            # Option 11. Send ERROR status.
+            s.send(b"GETFILE ERROR\r\n\r\n")
+        elif option == 12:
+            # Option 12. Send INVALID status.
+            s.send(b"GETFILE INVALID\r\n\r\n")
+        elif option == 13:
+            # Option 13. Send wrong scheme.
+            s.send(b"POSTFILE OK 4\r\n\r\nabcd")
+        elif option == 14:
+            # Option 14. Send status not in set.
+            s.send(b"GETFILE WRONG\r\n\r\n")
         elif option == 1000:
-            # Serve a 2 GB + 1 (exceeds int) file
+            # Serve a 2 GB + extra_bytes (exceeds int) file
             # This can be verified with: sha1sum filename.
             hash = hashlib.sha1()
-            orig_size = 2**31 + 1
+            extra_bytes = 1
+            orig_size = 2**31 + extra_bytes
             size = orig_size
             buffer_size = 8192
 
             s.send(bytes(f"GETFILE OK {size}\r\n\r\n", "UTF-8"))
-            while size > 0:
+            while size > extra_bytes:
                 random_buffer = random_bytes(buffer_size)
                 hash.update(random_buffer)
                 s.send(random_buffer)
                 size -= buffer_size
+            last_buffer = random_bytes(size)
+            hash.update(last_buffer)
+            s.send(last_buffer)
 
             print('XXX warning, sha1sum does not match files XXX')
             print(f"size={orig_size}, sha1sum={hash.hexdigest()}")
