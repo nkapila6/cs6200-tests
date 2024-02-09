@@ -31,6 +31,13 @@ This test only sends invalid paths and does not validate the filename. The serve
 ```apt-get install openjdk-8-jdk```
 
 ## Building
+
+First, in this repository's root directory, create a folder called "classes":
+
+```mkdir classes```
+
+Then, build it:
+
 ```make```
 
 ## Running
