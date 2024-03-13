@@ -23,6 +23,8 @@ DD_BLOCK_SIZE = 16
 #
 # Bytes per second estimation is only available if request count is an even multiple of
 # the workload sizes, thus the 10 sizes here.
+# Note: A non-existent filename was added to the workload file, so all 
+# request counts were changed to multiples of 11.
 WORKLOAD_SIZES = [
     0,
     563,
@@ -49,7 +51,7 @@ WORKLOAD_FILENAME = 'workload-ipcstress.txt'
 
 # Minimum size of the shared memory to use in the tests
 # This value has been know to change from semester to semester
-MIN_SEG_SIZE = 822
+MIN_SEG_SIZE = 824
 
 def run_sha1sum(filenames: List[str], output_file: str) -> None:
     """ Run sha1sum on filenames and write to an output file. """
@@ -78,14 +80,14 @@ def create_workload(workdir: str):
         filename = f'{path}/workload{i}.bin'
         filenames.append(filename)
         nblocks = size // DD_BLOCK_SIZE
-
-        subprocess.run([
-            '/usr/bin/dd',
-            'if=/dev/urandom',
-            f'of={filename}',
-            f'bs={DD_BLOCK_SIZE}',
-            f'count={nblocks}'
-        ], check=True)
+        if (not (os.path.isfile(filename))):
+            subprocess.run([
+                '/usr/bin/dd',
+                'if=/dev/urandom',
+                f'of={filename}',
+                f'bs={DD_BLOCK_SIZE}',
+                f'count={nblocks}'
+            ], check=True)
 
     full_sha1sum_filename = f'{path}/sha1sum.txt'
     print(f'Creating SHA1 hash file: {full_sha1sum_filename}')
@@ -104,6 +106,7 @@ def create_workload(workdir: str):
     with open(f'{workdir}/{WORKLOAD_FILENAME}', 'w') as file:
         for i, _ in enumerate(filenames):
             file.write(f'/{WORKLOAD_URL_PATH}/workload{i}.bin\n')
+        file.write(f'/{WORKLOAD_URL_PATH}/workload_FNF.bin\n')
 
     # Delete the result directory if it exists, gfclient_download will recreate it.
     shutil.rmtree(f'{workdir}/{WORKLOAD_URL_PATH}', ignore_errors=True)
@@ -355,7 +358,7 @@ def run_base_test(workdir: str):
     port = 10823
     create_workload(workdir)
 
-    request_count = 100
+    request_count = 110
     cache_thread_count = 1
     proxy_thread_count = 1
     proxy_segment_count = 1
@@ -389,7 +392,7 @@ def run_parameter_test(workdir: str):
     port = 10823
     create_workload(workdir)
 
-    request_count = 10
+    request_count = 11
     for cache_thread_count in range(1, 101, 10):
         for proxy_thread_count in range(cache_thread_count, 101, 10):
             for proxy_segment_count in range(1, 101, 10):
@@ -427,7 +430,7 @@ def run_stress_test(workdir: str):
     port = 10823
     create_workload(workdir)
 
-    request_count = 100
+    request_count = 110
     proxy_segment_count = 50
     proxy_segment_size = 1048576
 
@@ -462,7 +465,7 @@ def run_soak_test(workdir: str):
     port = 10823
     create_workload(workdir)
 
-    request_count = 1000000
+    request_count = 1100000
     proxy_segment_count = 50
     proxy_segment_size = 1048576
 

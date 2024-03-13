@@ -72,6 +72,11 @@ Current tests:
 
 `parameter` - tries variations on the parameters
 
+Note: to save time on subsequent tests, if the test `.bin` files have already 
+been created, the script does not re-generate them. To start the tests fresh 
+with new `.bin` files, simply delete them from the `ipcstress_files` directory 
+and the script will generate new ones.
+
 # DFS Stress Test
 
 ```python3 ./dfsstress.py number-of-test-files /path/to/server/mount /path/to/client1/mount [/path/to/client2/mount...]```
