@@ -81,13 +81,14 @@ def create_workload(workdir: str):
         filenames.append(filename)
         nblocks = size // DD_BLOCK_SIZE
         if (not (os.path.isfile(filename))):
-            subprocess.run([
+            dd_result = subprocess.run([
                 '/usr/bin/dd',
                 'if=/dev/urandom',
                 f'of={filename}',
                 f'bs={DD_BLOCK_SIZE}',
                 f'count={nblocks}'
-            ], check=True)
+            ], check=True, capture_output=True)
+            print(dd_result.stderr.decode())
 
     full_sha1sum_filename = f'{path}/sha1sum.txt'
     print(f'Creating SHA1 hash file: {full_sha1sum_filename}')
@@ -137,7 +138,7 @@ def run_ipcstress(
     remaining_request_count = request_count
 
     popen_cache = subprocess.Popen([
-        './simplecached',
+        f'{os.getcwd()}/simplecached',
         '-c',
         f'./{LOCALS_FILENAME}',
         '-t',
@@ -147,7 +148,7 @@ def run_ipcstress(
     # print(f'cache pid: {popen_cache.pid}')
 
     popen_proxy = subprocess.Popen([
-        './webproxy',
+        f'{os.getcwd()}/webproxy',
         '-n',
         str(proxy_segment_count),
         '-p',
@@ -248,7 +249,7 @@ def run_ipcstress(
             actual_request_count = min(MAX_GFCLIENT_DOWNLOAD_REQUEST_COUNT, remaining_request_count)
 
             popen_download = subprocess.Popen([
-                './gfclient_download',
+                f'{os.getcwd()}/gfclient_download',
                 '-p',
                 str(port),
                 '-t',
