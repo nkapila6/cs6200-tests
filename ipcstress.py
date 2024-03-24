@@ -69,6 +69,10 @@ def run_sha1sum(filenames: List[str], output_file: str) -> None:
 def create_workload(workdir: str):
     """ Create workload. """
 
+    # convert workdir to absolute path
+    if not os.path.isabs(workdir):
+        workdir = os.path.abspath(workdir)
+
     # Create path or ignore if already present.
     path = f'{workdir}/{WORKLOAD_LOCAL_PATH}'
     os.makedirs(path, exist_ok=True)
