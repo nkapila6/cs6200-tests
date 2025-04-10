@@ -80,3 +80,5 @@ and the script will generate new ones.
 # DFS Stress Test
 
 ```python3 ./dfsstress.py number-of-test-files /path/to/server/mount /path/to/client1/mount [/path/to/client2/mount...]```
+
+Note: testing script needs to run after server is started and all clients are mounted (with command "mount"), and the paths should match the arguments in the testing tool's command
