@@ -38,7 +38,9 @@ def handle_connection(s, option, file_hashes):
         req = s.recv(8192)
         print(req)
 
-        path = './' + str(req).split(" ")[2].strip()[1:-9] + f'_{req_num:04d}'
+        # path = './' + str(req).split(" ")[2].strip()[1:-9] + f'_{req_num:04d}'
+        path = "./" + str(req).split(" ")[2].strip()[1:-9]
+
         print(path)
 
         if option == 1:
