@@ -104,23 +104,85 @@ def handle_connection(s, option, file_hashes):
             # Serve a small file (2KB)
             # This can be verified with: sha1sum filename.
             hash = hashlib.sha1()
-            extra_bytes = 1
             orig_size = 2048
             size = orig_size
-            buffer_size = 8192
 
-            s.send(bytes(f"GETFILE OK {size}\r\n\r\n", "UTF-8"))
-            while size > extra_bytes:
-                random_buffer = random_bytes(buffer_size)
+            header_buffer = bytes(f"GETFILE OK {size}\r\n\r\n", "UTF-8")
+            header_buffer_size = len(header_buffer)
+
+            payload_size = random.randint(min(100, size), min(1_000, size))
+            random_payload = random_bytes(payload_size)
+
+            first_buffer = header_buffer + random_payload
+            first_buffer_size = len(first_buffer)
+
+            print(
+                f"header size {header_buffer_size} + payload size {payload_size} = first buffer size {first_buffer_size}")
+
+            # Hash only includes the payload, as the header is not stored on the client.
+            hash.update(random_payload)
+            s.send(first_buffer)
+
+            # Size to send only includes the payload, not the header.
+            size -= payload_size
+            print(f"remaining size {size}")
+
+            while size > 0:
+                buffer_size = random.randint(min(100, size), min(1_000, size))
+                random_buffer = bytes([random.randint(0, 255)
+                                      for _ in range(0, buffer_size)])
                 hash.update(random_buffer)
                 s.send(random_buffer)
                 size -= buffer_size
-            last_buffer = random_bytes(size)
-            hash.update(last_buffer)
-            s.send(last_buffer)
 
-            print('XXX warning, sha1sum does not match files XXX')
-            print(f"size={orig_size}, sha1sum={hash.hexdigest()}")
+            expected_hex = hash.hexdigest()
+            print(f"size={orig_size}, sha1sum={expected_hex}")
+
+            # Wait a moment for the client to write the file
+            time.sleep(.2)
+
+            # Verify the received file
+            try:
+                # Get the directory path
+                dir_path = os.path.dirname(path)
+                if not dir_path:
+                    dir_path = '.'
+
+                if not os.path.exists(dir_path):
+                    print(f"Directory {dir_path} does not exist")
+                    return
+
+                # Get all files and their hashes
+                print("Checking files in directory:")
+                for filename in os.listdir(dir_path):
+                    filepath = os.path.join(dir_path, filename)
+                    if os.path.isfile(filepath):
+                        try:
+                            with open(filepath, 'rb') as f:
+                                file_hash = hashlib.sha1()
+                                while True:
+                                    data = f.read(8192)
+                                    if not data:
+                                        break
+                                    file_hash.update(data)
+                                file_hashes[filename] = file_hash.hexdigest()
+                        except Exception:
+                            continue
+
+                # Check for matching hash
+                found_match = False
+                for filename, file_hash in file_hashes.items():
+                    if file_hash == expected_hex:
+                        print(
+                            f"File verification successful! Found matching file: {filename}")
+                        found_match = True
+                        break
+
+                if not found_match:
+                    print(
+                        f"File verification failed! No file found with SHA1: {expected_hex}")
+            except Exception as e:
+                print(f"Error verifying file: {e}")
         elif option == 1000:
             # Serve a 2 GB + extra_bytes (exceeds int) file
             # This can be verified with: sha1sum filename.
