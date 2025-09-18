@@ -100,6 +100,27 @@ def handle_connection(s, option, file_hashes):
         elif option == 14:
             # Option 14. Send status not in set.
             s.send(b"GETFILE WRONG\r\n\r\n")
+        elif option == 999:
+            # Serve a small file (2KB)
+            # This can be verified with: sha1sum filename.
+            hash = hashlib.sha1()
+            extra_bytes = 1
+            orig_size = 2048
+            size = orig_size
+            buffer_size = 8192
+
+            s.send(bytes(f"GETFILE OK {size}\r\n\r\n", "UTF-8"))
+            while size > extra_bytes:
+                random_buffer = random_bytes(buffer_size)
+                hash.update(random_buffer)
+                s.send(random_buffer)
+                size -= buffer_size
+            last_buffer = random_bytes(size)
+            hash.update(last_buffer)
+            s.send(last_buffer)
+
+            print('XXX warning, sha1sum does not match files XXX')
+            print(f"size={orig_size}, sha1sum={hash.hexdigest()}")
         elif option == 1000:
             # Serve a 2 GB + extra_bytes (exceeds int) file
             # This can be verified with: sha1sum filename.
